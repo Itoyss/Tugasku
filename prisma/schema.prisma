@@ -1,0 +1,101 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  avatarColor  String   @default("indigo")
+  createdAt    DateTime @default(now())
+
+  personalTasks      PersonalTask[]
+  memberships        GroupMember[]
+  ownedGroups        Group[]        @relation("GroupOwner")
+  assignedGroupTasks GroupTask[]    @relation("TaskAssignee")
+  createdGroupTasks  GroupTask[]    @relation("TaskCreator")
+  notifications      Notification[]
+}
+
+model PersonalTask {
+  id            String   @id @default(cuid())
+  userId        String
+  title         String
+  course        String   @default("Umum")
+  dueDate       DateTime
+  done          Boolean  @default(false)
+  remindEnabled Boolean  @default(true)
+  createdAt     DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, done])
+  @@index([dueDate])
+}
+
+model Group {
+  id         String   @id @default(cuid())
+  name       String
+  course     String   @default("")
+  inviteCode String   @unique
+  isLocked   Boolean  @default(false)
+  ownerId    String
+  createdAt  DateTime @default(now())
+
+  owner   User          @relation("GroupOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  members GroupMember[]
+  tasks   GroupTask[]
+}
+
+model GroupMember {
+  id       String   @id @default(cuid())
+  groupId  String
+  userId   String
+  role     String   @default("member")
+  joinedAt DateTime @default(now())
+
+  group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([groupId, userId])
+  @@index([userId])
+}
+
+model GroupTask {
+  id          String    @id @default(cuid())
+  groupId     String
+  title       String
+  status      String    @default("todo")
+  dueDate     DateTime
+  assigneeId  String
+  proofText   String?
+  completedAt DateTime?
+  createdById String
+  createdAt   DateTime  @default(now())
+
+  group     Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  assignee  User  @relation("TaskAssignee", fields: [assigneeId], references: [id], onDelete: Cascade)
+  createdBy User  @relation("TaskCreator", fields: [createdById], references: [id], onDelete: Cascade)
+
+  @@index([groupId, status])
+  @@index([assigneeId])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  message   String
+  type      String   @default("info")
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead])
+}
