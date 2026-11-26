@@ -37,3 +37,25 @@ export async function PATCH(
 
   return NextResponse.json({ group: updated });
 }
+
+export async function DELETE(
+  _req: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
+  const auth = await requireApiUser();
+  if (auth.error) return auth.error;
+
+  const { id } = await context.params;
+  const check = await requireGroupMembership(id, auth.user.id);
+  if (check.error) return check.error;
+
+  if (check.membership.group.ownerId !== auth.user.id) {
+    return NextResponse.json(
+      { error: "Hanya pembuat kelompok yang bisa menghapus grup." },
+      { status: 403 }
+    );
+  }
+
+  await prisma.group.delete({ where: { id } });
+  return NextResponse.json({ ok: true });
+}

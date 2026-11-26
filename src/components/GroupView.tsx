@@ -74,6 +74,7 @@ export function GroupView({
   const [groupCourse, setGroupCourse] = useState("");
   const [joinCode, setJoinCode] = useState("");
   const [groupModalError, setGroupModalError] = useState("");
+  const [confirmDeleteGroup, setConfirmDeleteGroup] = useState(false);
 
   async function handleCreateGroup(e: React.FormEvent) {
     e.preventDefault();
@@ -143,6 +144,21 @@ export function GroupView({
     if (res.ok) {
       await onRefresh();
       onToast("Kode undangan baru dibuat.");
+    }
+  }
+
+  async function handleDeleteGroup() {
+    if (!activeGroup) return;
+    const res = await fetch(`/api/groups/${activeGroup.id}`, {
+      method: "DELETE",
+    });
+    if (res.ok) {
+      setConfirmDeleteGroup(false);
+      await onRefresh();
+      onToast("Kelompok berhasil dihapus.");
+    } else {
+      const data = (await res.json()) as { error?: string };
+      onToast(data.error || "Gagal menghapus kelompok.");
     }
   }
 
@@ -452,6 +468,14 @@ export function GroupView({
                   className="p-1.5 rounded-lg border border-[var(--border)] text-[var(--muted)] hover:text-[var(--text)] cursor-pointer"
                 >
                   <RefreshCw className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setConfirmDeleteGroup(true)}
+                  title="Hapus kelompok"
+                  className="p-1.5 rounded-lg border border-[var(--border)] text-[var(--muted)] hover:text-red-600 dark:hover:text-red-400 hover:border-red-500/40 cursor-pointer"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
                 </button>
               </div>
             )}
@@ -833,6 +857,41 @@ export function GroupView({
                 </button>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {confirmDeleteGroup && (
+        <div
+          onClick={() => setConfirmDeleteGroup(false)}
+          className="fixed inset-0 bg-black/50 backdrop-blur-xs z-50 flex items-center justify-center p-4"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="bg-[var(--card)] border border-[var(--border)] rounded-2xl w-full max-w-sm p-5 space-y-4 shadow-xl"
+          >
+            <div className="space-y-1">
+              <h3 className="text-sm font-bold">Hapus Kelompok?</h3>
+              <p className="text-xs text-[var(--muted)] leading-relaxed">
+                Kelompok <strong>{activeGroup.name}</strong> beserta seluruh tugas di dalamnya akan dihapus permanen.
+              </p>
+            </div>
+            <div className="flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setConfirmDeleteGroup(false)}
+                className="px-3.5 py-2 rounded-xl border border-[var(--border)] text-xs font-medium hover:bg-[var(--bg)] cursor-pointer"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={handleDeleteGroup}
+                className="px-3.5 py-2 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs font-semibold cursor-pointer"
+              >
+                Ya, Hapus
+              </button>
+            </div>
           </div>
         </div>
       )}
